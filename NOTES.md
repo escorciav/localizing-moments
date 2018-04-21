@@ -1,0 +1,14 @@
+1. Feature description
+    - RGB and flow features are of size 4096 and 1024, respectively.
+    - The HDF5 file contains a double tensor of size (6, feat_size)
+    - TBC: the value on each matrix corresponds to the feature of a 5s chunk.
+    - Features for each of the 21 possible segments and context features are computed on-the-fly.
+        - Take a look at L:181:L:197 in file `data_processing.py`
+            - [URL]()
+        - Normalization: Frobenius norm of the feature matrix
+    - Text queries are ...
+        - There are two features glove matrix and number of words in query.
+        - Matrix of `[max_len_sentence, num_glove_centroids]`
+            - Matrix is arrange in a particular way. Order is consistent but short sentences will be padded with a lot of zeros at the begining.
+        - Number of words is encoded as a vector of size [max_len_sentence]
+            - This is a binary vector with 1s on the locations where the query has words.

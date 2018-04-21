@@ -302,7 +302,7 @@ class extractVisualFeatures(extractData):
     self.batch_size = params['batch_size']
     self.num_glove_centroids = params['num_glove_centroids']
 
-    features_h5py = h5py.File(params['features'])
+    features_h5py = h5py.File(params['features'], mode='r')
     features = {}
     for key in features_h5py.keys():
       features[key] = np.array(features_h5py[key])
