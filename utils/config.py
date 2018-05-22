@@ -1,5 +1,5 @@
 #Please change the following:
-caffe_dir = 'caffe/'
+caffe_dir = '/caffe/caffe/'
 snapshot_dir = 'snapshots/'
 prototxts = 'prototxts/'
 result_dir = 'results/'

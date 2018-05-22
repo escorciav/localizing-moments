@@ -10,7 +10,7 @@ python build_net.py  --feature_process_visual feature_process_context \
                      --feature_process_language recurrent_embedding \
                      --visual_embedding_dim 500 100 \
                      --language_embedding_dim 1000 100 \
-                     --gpu 1 \
+                     --gpu 0 \
                      --max_iter 30000 \
                      --snapshot 10000 \
                      --stepsize 10000 \
