@@ -103,7 +103,7 @@ def test_model(deploy_net, snapshot_tag,
         cue = '_flow'
 
     filename = os.path.join(result_dir,
-                            'queries_features_{}.hdf5'.format(split))
+                            'queries_{}{}.hdf5'.format(split, cue))
 
     with h5py.File(filename, 'w') as fid:
         for k, v in queries.iteritems():
@@ -112,7 +112,7 @@ def test_model(deploy_net, snapshot_tag,
     print "Dumped results to: {}".format(filename)
 
     filename = os.path.join(result_dir,
-                            'corpus_features_{}{}.hdf5'.format(split, cue))
+                            'corpus_{}{}.hdf5'.format(split, cue))
     with h5py.File(filename, 'w') as fid:
         for k, v in video_corpus.iteritems():
             fid.create_dataset(k, data=v, chunks=True)
