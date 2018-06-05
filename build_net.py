@@ -23,28 +23,28 @@ class retrieval_net(object):
     squared = L.Power(difference, power=2)
     reduction = L.Reduction(squared, axis=axis)
     return reduction
-  
+
   def eltwise_distance(self, vec1, vec2):
     mult = L.Eltwise(vec1, vec2, operation=0)
-    norm_mult = self.normalize(mult, numtiles=self.visual_embedding_dim[-1])   
+    norm_mult = self.normalize(mult, numtiles=self.visual_embedding_dim[-1])
 
-    score = L.InnerProduct(norm_mult, num_output=1, 
-                           weight_filler=self.uniform_weight_filler(-0.08, .08), 
-                           param=self.learning_params([[1,1], [2, 0]], ['eltwise_dist', 'eltwise_dist_b'])) 
+    score = L.InnerProduct(norm_mult, num_output=1,
+                           weight_filler=self.uniform_weight_filler(-0.08, .08),
+                           param=self.learning_params([[1,1], [2, 0]], ['eltwise_dist', 'eltwise_dist_b']))
 
     return score
-  
-  
+
+
   def bilinear_distance(self, vec1, vec2):
       reshape_vec1 = L.Reshape(vec1, shape=dict(dim=[self.batch_size, -1, 1, 1]))
       reshape_vec2 = L.Reshape(vec2, shape=dict(dim=[self.batch_size, -1, 1, 1]))
       bilinear = L.CompactBilinear(reshape_vec1, reshape_vec2)
       signed = L.SignedSqrt(bilinear)
       l2_normalize = L.L2Normalize(signed)
-      score = L.InnerProduct(l2_normalize, num_output=1, 
-                             weight_filler=self.uniform_weight_filler(-0.08, .08), 
-                             param=self.learning_params([[1,1], [2, 0]], ['bilinear_dist', 'bilinear_dist_b'])) 
-  
+      score = L.InnerProduct(l2_normalize, num_output=1,
+                             weight_filler=self.uniform_weight_filler(-0.08, .08),
+                             param=self.learning_params([[1,1], [2, 0]], ['bilinear_dist', 'bilinear_dist_b']))
+
       return score
 
   def dot_product_distance(self, vec1, vec2, axis=1):
@@ -64,8 +64,8 @@ class retrieval_net(object):
     self.is_test = is_test
     self.dropout_visual = args.dropout_visual
     self.dropout_language = args.dropout_language
-    self.visual_embedding_dim = args.visual_embedding_dim 
-    self.language_embedding_dim = args.language_embedding_dim 
+    self.visual_embedding_dim = args.visual_embedding_dim
+    self.language_embedding_dim = args.language_embedding_dim
     self.vision_layers = args.vision_layers
     self.language_layers = args.language_layers
     self.loc = args.loc
@@ -93,7 +93,7 @@ class retrieval_net(object):
     if 'batch_size' in param_str.keys():
       self.batch_size = param_str['batch_size']
     else:
-      self.batch_size =120 
+      self.batch_size =120
 
     self.params = params
     self.image_tag = args.image_tag
@@ -105,7 +105,7 @@ class retrieval_net(object):
     elif args.distance_function == 'bilinear_distance':
       self.distance_function = self.bilinear_distance
     else:
-      self.distance_function = self.euclidean_distance 
+      self.distance_function = self.euclidean_distance
 
   #Network operations I use frequently
 
@@ -147,19 +147,19 @@ class retrieval_net(object):
     power_sum = L.Reduction(power, axis=axis, operation=1)
     sqrt = L.Power(power_sum, power=-0.5, shift=0.00001)
     if axis == 1:
-        reshape = L.Reshape(sqrt, shape=dict(dim=[-1,1])) 
+        reshape = L.Reshape(sqrt, shape=dict(dim=[-1,1]))
     if axis == 2:
-        reshape = L.Reshape(sqrt, shape=dict(dim=[self.batch_size,-1, 1])) 
-    tile = L.Tile(reshape, axis=axis, tiles=numtiles) 
+        reshape = L.Reshape(sqrt, shape=dict(dim=[self.batch_size,-1, 1]))
+    tile = L.Tile(reshape, axis=axis, tiles=numtiles)
     return L.Eltwise(tile, bottom, operation=0)
 
   def image_model_two_layer(self, bottom, time_stamp=None, axis=1, tag=''):
-    if time_stamp: 
+    if time_stamp:
         bottom = L.Concat(bottom, time_stamp, axis=1) #time stamp will just be zeros for --no-loc option
 
-    inner_product_1 =  L.InnerProduct(bottom, num_output=self.visual_embedding_dim[0], 
+    inner_product_1 =  L.InnerProduct(bottom, num_output=self.visual_embedding_dim[0],
                                weight_filler=self.uniform_weight_filler(-0.08, .08),
-                               bias_filler=self.constant_filler(0), 
+                               bias_filler=self.constant_filler(0),
                                param=self.learning_params([[1,1], [2,0]], ['image_embed1'+tag, 'image_embed_1b'+tag]), axis=axis)
 
     if self.image_tag:
@@ -167,9 +167,9 @@ class retrieval_net(object):
       self.count_im += 1
     nonlin_1 = L.ReLU(inner_product_1)
 
-    top_visual =  L.InnerProduct(nonlin_1, num_output=self.visual_embedding_dim[1], 
+    top_visual =  L.InnerProduct(nonlin_1, num_output=self.visual_embedding_dim[1],
                            weight_filler=self.uniform_weight_filler(-0.08, .08),
-                           bias_filler=self.constant_filler(0), 
+                           bias_filler=self.constant_filler(0),
                            param=self.learning_params([[1,1], [2,0]], ['image_embed2'+tag, 'image_embed_b2'+tag]), axis=axis)
 
     if self.image_tag:
@@ -181,35 +181,35 @@ class retrieval_net(object):
     return dropout
 
   def image_model_one_layer(self, bottom, time_stamp=None, axis=1, tag=''):
-    if time_stamp: 
+    if time_stamp:
         bottom = L.Concat(bottom, time_stamp, axis=1) #time stamp will just be zeros for --no-loc option
-    inner_product = L.InnerProduct(bottom, num_output=self.visual_embedding_dim[0], 
+    inner_product = L.InnerProduct(bottom, num_output=self.visual_embedding_dim[0],
                            weight_filler=self.uniform_weight_filler(-0.08, .08),
-                           bias_filler=self.constant_filler(0), 
-                           param=self.learning_params([[1,1], [2,0]], ['image_embed1'+tag, 'image_embed_1b'+tag]), 
+                           bias_filler=self.constant_filler(0),
+                           param=self.learning_params([[1,1], [2,0]], ['image_embed1'+tag, 'image_embed_1b'+tag]),
                            axis=axis)
     dropout = L.Dropout(inner_product, dropout_ratio=self.dropout_visual)
     setattr(self.n, 'embedding_visual', dropout)
-    return dropout 
+    return dropout
 
   #language_models
   def language_model_lstm_no_embed(self, sent_bottom, cont_bottom, text_name='embedding_text'):
 
     lstm_lr = self.args.lstm_lr
     embedding_lr = self.args.language_embedding_lr
-      
-    lstm = L.LSTM(sent_bottom, cont_bottom, 
+
+    lstm = L.LSTM(sent_bottom, cont_bottom,
                   recurrent_param = dict(num_output=self.language_embedding_dim[0],
                   weight_filler=self.uniform_weight_filler(-0.08, 0.08),
                   bias_filler = self.constant_filler(0)),
-                  param=self.learning_params([[lstm_lr,lstm_lr], [lstm_lr,lstm_lr], [lstm_lr,lstm_lr]], ['lstm1', 'lstm2', 'lstm3'])) 
+                  param=self.learning_params([[lstm_lr,lstm_lr], [lstm_lr,lstm_lr], [lstm_lr,lstm_lr]], ['lstm1', 'lstm2', 'lstm3']))
     lstm_slices = L.Slice(lstm, slice_point=self.params['sentence_length']-1, axis=0, ntop=2)
     self.n.tops['silence_cell_'+str(self.silence_count)] = L.Silence(lstm_slices[0], ntop=0)
-    self.silence_count += 1 
+    self.silence_count += 1
     top_lstm = L.Reshape(lstm_slices[1], shape=dict(dim=[-1, self.language_embedding_dim[0]]))
-    top_text =  L.InnerProduct(top_lstm, num_output=self.language_embedding_dim[1], 
+    top_text =  L.InnerProduct(top_lstm, num_output=self.language_embedding_dim[1],
                                weight_filler=self.uniform_weight_filler(-0.08, .08),
-                               bias_filler=self.constant_filler(0), 
+                               bias_filler=self.constant_filler(0),
                                param=self.learning_params([[embedding_lr,embedding_lr], [embedding_lr*2,0]], ['lstm_embed1', 'lstm_embed_1b']))
     setattr(self.n, text_name, top_text)
     return top_text
@@ -226,22 +226,22 @@ class retrieval_net(object):
     ranking_loss = L.Reduction(max_sum_margin_relu, operation=4, loss_weight=[lw])
 
     return  ranking_loss
- 
+
   def write_net(self, save_file, top):
     write_proto = top.to_proto()
     #assert not os.path.isfile(save_file)
-      
+
     with open(save_file, 'w') as f:
       print(write_proto, file=f)
-    print("Wrote net to: %s." %save_file) 
+    print("Wrote net to: %s." %save_file)
 
   def get_models(self):
     if self.vision_layers == '1':
       vision_layer = self.image_model_one_layer
-      assert len(self.visual_embedding_dim) == 1 
+      assert len(self.visual_embedding_dim) == 1
     elif self.vision_layers == '2':
-      vision_layer = self.image_model_two_layer  
-      assert len(self.visual_embedding_dim) == 2 
+      vision_layer = self.image_model_two_layer
+      assert len(self.visual_embedding_dim) == 2
     else:
       raise Exception("No specified vision layer for %s" %self.vision_layers)
 
@@ -257,7 +257,7 @@ class retrieval_net(object):
     data = L.Python(module="data_processing", layer=self.data_layer, param_str=str(param_str), ntop=self.top_size)
     for key, value in zip(self.params['top_names_dict'].keys(), self.params['top_names_dict'].values()):
         setattr(self.n, key, data[value])
-    
+
     im_model, lang_model = self.get_models()
 
     data_bottoms = []
@@ -279,7 +279,7 @@ class retrieval_net(object):
       bottom_intra = im_model(bottom_intra, n_time_stamp)
     if (self.inter) & (not self.intra):
       self.n.tops['silence_cell_'+str(self.silence_count)] = L.Silence(n_time_stamp, ntop=0)
-      self.silence_count += 1      
+      self.silence_count += 1
 
     cont = data[self.top_name_dict['cont']]
     query = lang_model(query, cont)
@@ -291,20 +291,20 @@ class retrieval_net(object):
 
   def build_retrieval_model_deploy(self, save_tag, visual_feature_dim, language_feature_dim):
 
-    image_input =  L.DummyData(shape=[dict(dim=[21, visual_feature_dim])], ntop=1) 
-    setattr(self.n, 'image_data', image_input) 
+    image_input =  L.DummyData(shape=[dict(dim=[21, visual_feature_dim])], ntop=1)
+    setattr(self.n, 'image_data', image_input)
 
-    loc_input =  L.DummyData(shape=[dict(dim=[21, 2])], ntop=1) 
-    setattr(self.n, 'loc_data', loc_input) 
-   
+    loc_input =  L.DummyData(shape=[dict(dim=[21, 2])], ntop=1)
+    setattr(self.n, 'loc_data', loc_input)
+
     im_model, lang_model = self.get_models()
 
     bottom_visual = im_model(image_input, loc_input)
 
-    text_input =  L.DummyData(shape=[dict(dim=[self.params['sentence_length'], 21, language_feature_dim])], ntop=1) 
-    setattr(self.n, 'text_data', text_input)  
-    cont_input =  L.DummyData(shape=[dict(dim=[self.params['sentence_length'], 21])], ntop=1) 
-    setattr(self.n, 'cont_data', cont_input)  
+    text_input =  L.DummyData(shape=[dict(dim=[self.params['sentence_length'], 21, language_feature_dim])], ntop=1)
+    setattr(self.n, 'text_data', text_input)
+    cont_input =  L.DummyData(shape=[dict(dim=[self.params['sentence_length'], 21])], ntop=1)
+    setattr(self.n, 'cont_data', cont_input)
     bottom_text = lang_model(text_input, cont_input)
 
     self.n.tops['rank_score'] = self.distance_function(bottom_visual, bottom_text)
@@ -325,8 +325,8 @@ def make_solver(save_name, snapshot_prefix, train_nets, test_nets, **kwargs):
   if 'test_iter' not in parameter_dict.keys(): parameter_dict['test_iter'] = 10
   if 'test_interval' not in parameter_dict.keys(): parameter_dict['test_interval'] = 100
   if 'base_lr' not in parameter_dict.keys(): parameter_dict['base_lr'] = 0.1
-  if 'lr_policy' not in parameter_dict.keys(): parameter_dict['lr_policy'] = '"step"' 
-  if 'display' not in parameter_dict.keys(): parameter_dict['display'] = 100 
+  if 'lr_policy' not in parameter_dict.keys(): parameter_dict['lr_policy'] = '"step"'
+  if 'display' not in parameter_dict.keys(): parameter_dict['display'] = 100
   if 'max_iter' not in parameter_dict.keys(): parameter_dict['max_iter'] = 10000
   if 'gamma' not in parameter_dict.keys(): parameter_dict['gamma'] = 0.1
   if 'stepsize' not in parameter_dict.keys(): parameter_dict['stepsize'] = 5000
@@ -337,18 +337,18 @@ def make_solver(save_name, snapshot_prefix, train_nets, test_nets, **kwargs):
   if 'random_seed' not in parameter_dict.keys(): parameter_dict['random_seed'] = 1701
   if 'average_loss' not in parameter_dict.keys(): parameter_dict['average_loss'] = 100
   if 'clip_gradients' not in parameter_dict.keys(): parameter_dict['clip_gradients'] = 10
-  if 'device_id' not in parameter_dict.keys(): parameter_dict['device_id'] = 0 
+  if 'device_id' not in parameter_dict.keys(): parameter_dict['device_id'] = 0
   if 'debug_info' not in parameter_dict.keys(): parameter_dict['debug_info'] = 'false'
 
   if parameter_dict['type'] == '"Adam"':
-      parameter_dict['lr_policy'] = '"fixed"' 
+      parameter_dict['lr_policy'] = '"fixed"'
       parameter_dict['momentum2'] = 0.999
       parameter_dict['regularization_type'] = '"L2"'
-      if 'type' not in parameter_dict.keys(): parameter_dict['delta'] = 0.0000001 
+      if 'type' not in parameter_dict.keys(): parameter_dict['delta'] = 0.0000001
 
   snapshot_prefix = 'snapshots/%s' %snapshot_prefix
   parameter_dict['snapshot_prefix'] = '"%s"' %snapshot_prefix
- 
+
   write_txt = open(save_name, 'w')
   write_txt.writelines('train_net: "%s"\n' %train_nets)
   for tn in test_nets:
@@ -371,23 +371,23 @@ def train_model(solver_path, net=None):
     solver.net.copy_from(net)
     print("Copying weights from %s" %net)
   solver.solve()
- 
+
 if __name__ == "__main__":
 
   parser = argparse.ArgumentParser()
 
   #how to tag built nets/snapshots etc.
-  parser.add_argument("--tag", type=str, default='') 
+  parser.add_argument("--tag", type=str, default='')
 
   #training data
-  parser.add_argument("--train_json", type=str, default='data/train_data.json') 
-  parser.add_argument("--train_h5", type=str, default='data/average_fc7.h5') 
-  parser.add_argument("--test_json", type=str, default='data/val_data.json') 
-  parser.add_argument("--test_h5", type=str, default='data/average_fc7.h5') 
+  parser.add_argument("--train_json", type=str, default='data/train_data.json')
+  parser.add_argument("--train_h5", type=str, default='data/average_fc7.h5')
+  parser.add_argument("--test_json", type=str, default='data/val_data.json')
+  parser.add_argument("--test_h5", type=str, default='data/average_fc7.h5')
 
   #net specifications
-  parser.add_argument("--feature_process_visual", type=str, default='feature_process_norm') 
-  parser.add_argument("--feature_process_language", type=str, default='recurrent_embedding') 
+  parser.add_argument("--feature_process_visual", type=str, default='feature_process_norm')
+  parser.add_argument("--feature_process_language", type=str, default='recurrent_embedding')
   parser.add_argument('--loc', dest='loc', action='store_true')
   parser.add_argument('--no-loc', dest='loc', action='store_false')
   parser.set_defaults(loc=False)
@@ -418,8 +418,17 @@ if __name__ == "__main__":
   parser.add_argument('--gpu', type=int, default=0)
   parser.add_argument('--solver_type', type=str, default='"SGD"')
   parser.add_argument('--delta', type=float, default=1e-8) #only for ADAM
+  parser.add_argument('--exp-id', type=int, default=-1) #setup for adobe cluster
   args = parser.parse_args()
 
+  if args.exp_id >= 0:
+    print("experiment id: %d" % args.exp_id)
+    print("seed for seed: %d" % args.random_seed)
+    rng_gen = np.random.RandomState(args.random_seed)
+    for i in range(args.exp_id):
+      args.random_seed = int(rng_gen.randint(2**32))
+    args.tag = args.tag + 'rng%s_' % args.random_seed
+  print("tag: %s" % args.tag)
   print("Feature process visual: %s" %args.feature_process_visual)
   print("Feature process language: %s" %args.feature_process_language)
   print("Loc: %s" %args.loc)
@@ -427,7 +436,7 @@ if __name__ == "__main__":
   print("Dropout language %f" %args.dropout_language)
   print("Pretrained model %s" %args.pretrained_model)
   valid_loss_type = ['triplet', 'inter', 'intra']
-  
+
   assert args.loss_type in valid_loss_type
 
   assert args.lw_inter >= 0
@@ -435,29 +444,29 @@ if __name__ == "__main__":
 
   if args.loss_type == 'inter':
     args.lw_inter = 1
-    args.lw_intra = 0 
+    args.lw_intra = 0
 
   if args.loss_type == 'intra':
     args.lw_intra = 1
-    args.lw_inter = 0 
+    args.lw_inter = 0
 
   train_base = 'prototxts/train_clip_retrieval_%s.prototxt'
-  solver_base = 'prototxts/solver_clip_retrieval_%s.prototxt' 
-  deploy_base = 'prototxts/deploy_clip_retrieval_%s.prototxt' 
-  snapshot_base = 'clip_retrieval_' 
-  
+  solver_base = 'prototxts/solver_clip_retrieval_%s.prototxt'
+  deploy_base = 'prototxts/deploy_clip_retrieval_%s.prototxt'
+  snapshot_base = 'clip_retrieval_'
+
   params = {}
   params['sentence_length'] = 50
-  params['descriptions'] = args.train_json 
-  params['features'] = args.train_h5 
+  params['descriptions'] = args.train_json
+  params['features'] = args.train_h5
   params['top_names'] = ['features_p', 'query', 'features_time_stamp_p', 'features_time_stamp_n']
   params['top_names_dict'] = {}
-  for key in params['top_names']: params['top_names_dict'] = add_dict_values(key, params['top_names_dict']) 
+  for key in params['top_names']: params['top_names_dict'] = add_dict_values(key, params['top_names_dict'])
   params['feature_process'] = args.feature_process_visual
-  params['loc_feature'] = args.loc 
-  params['language_feature'] = args.feature_process_language 
+  params['loc_feature'] = args.loc
+  params['language_feature'] = args.feature_process_language
   params['loss_type'] = args.loss_type
-  params['batch_size'] = args.batch_size  
+  params['batch_size'] = args.batch_size
 
   if args.loss_type in ['triplet', 'inter']:
     inter_top_name = 'features_inter'
@@ -472,58 +481,58 @@ if __name__ == "__main__":
     params['top_names'].append('cont')
     params['top_names_dict'] = add_dict_values('cont', params['top_names_dict'])
     params['sentence_length'] = 50
-    assert params['language_feature'] in ['recurrent_word', 'recurrent_embedding'] 
+    assert params['language_feature'] in ['recurrent_word', 'recurrent_embedding']
 
   top_size = len(params['top_names'])
- 
+
   f = h5py.File(params['features'])
-  feat = np.array(f.values()[0]) 
+  feat = np.array(f.values()[0])
   f.close()
   visual_feature_dim = feature_process_dict[args.feature_process_visual](0,0,feat).shape[-1]
 
-  language_processor = language_feature_process_dict[params['language_feature']](read_json(params['descriptions'])) 
-  language_feature_dim = language_processor.get_vector_dim() 
-  vocab_size = language_processor.get_vocab_size() 
+  language_processor = language_feature_process_dict[params['language_feature']](read_json(params['descriptions']))
+  language_feature_dim = language_processor.get_vector_dim()
+  vocab_size = language_processor.get_vocab_size()
   params['vocab_size'] = vocab_size
- 
+
   pretrained_model_bool = False
   if args.pretrained_model:
-    pretrained_model_bool = True 
+    pretrained_model_bool = True
 
   data_layer = 'dataLayer_ExtractPairedLanguageVision'
   tag = '%s%s%s_%s_lf%s_dv%s_dl%s_nlv%s_nll%s_edl%s_edv%s_pm%s_loss%s_lwInter%s' %(snapshot_base,args.tag,
-                   args.feature_process_visual, args.feature_process_language, 
-                   str(args.loc), str(args.dropout_visual), str(args.dropout_language), 
-                   args.vision_layers, args.language_layers, 
-                   '-'.join([str(a) for a in args.language_embedding_dim]), 
-                   '-'.join([str(a) for a in args.visual_embedding_dim]), 
+                   args.feature_process_visual, args.feature_process_language,
+                   str(args.loc), str(args.dropout_visual), str(args.dropout_language),
+                   args.vision_layers, args.language_layers,
+                   '-'.join([str(a) for a in args.language_embedding_dim]),
+                   '-'.join([str(a) for a in args.visual_embedding_dim]),
                    pretrained_model_bool, args.loss_type,
                    args.lw_inter)
-  
+
   train_path = train_base %tag
-  deploy_path = deploy_base %tag 
-  solver_path = solver_base %tag 
-  
+  deploy_path = deploy_base %tag
+  solver_path = solver_base %tag
+
   net = retrieval_net(args=args, data_layer=data_layer,param_str=params,params=params, top_size=top_size)
   net.visual_feature_dim = visual_feature_dim
-  net.build_retrieval_model(params, train_path) 
-  
+  net.build_retrieval_model(params, train_path)
+
   params['batch_size'] = 100
 
   net = retrieval_net(args=args, data_layer=data_layer,param_str=params,params=params, top_size=top_size, is_test=True)
   net.visual_feature_dim = visual_feature_dim
   net.batch_size=21
-  net.build_retrieval_model_deploy(deploy_path, visual_feature_dim, language_feature_dim) 
+  net.build_retrieval_model_deploy(deploy_path, visual_feature_dim, language_feature_dim)
 
-  max_iter = args.max_iter 
+  max_iter = args.max_iter
   snapshot = args.snapshot
   stepsize = args.stepsize
-  base_lr = args.base_lr 
+  base_lr = args.base_lr
   if os.path.exists("Cannot have the same solver path: %s" %solver_path):
     print("Cannot have the same solver path: %s" %solver_path)
   else:
     make_solver(solver_path, tag, train_path, [], **{'device_id': args.gpu, 'max_iter': max_iter, 'snapshot': snapshot, 'weight_decay': args.weight_decay, 'stepsize': stepsize, 'base_lr': base_lr, 'random_seed': args.random_seed, 'display': 10, 'type': args.solver_type, 'delta': args.delta, 'iter_size': 120/args.batch_size})
     caffe.set_device(args.gpu)
     caffe.set_mode_gpu()
-    caffe.set_device(args.gpu) 
+    caffe.set_device(args.gpu)
     train_model(solver_path, args.pretrained_model)
