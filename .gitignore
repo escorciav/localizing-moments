@@ -1,4 +1,4 @@
-# added by Victor
+# Victor does not like crowded status
 prototxts/
 snapshots/
 data/average_fc7.h5
@@ -6,6 +6,13 @@ data/average_global_flow.h5
 data/glove.6B.300d.txt
 data/glove.6B.zip
 results/
+
+# log
+log/docker*
+
+# yet other handy version of a particular script
+batch_flow_train_*.sh
+batch_rgb_train_*.sh
 
 # editors
 .ipynb_checkpoints/

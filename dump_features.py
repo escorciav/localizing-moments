@@ -19,11 +19,9 @@ L2_TEST_DECIMAL = 6
 L2_TEST_EXHAUSTIVITY = 0.95  # less than zero to run test over entire set
 os.environ['GLOG_minloglevel'] = '2'  # suppress log / decrease for debugging
 
-def test_model(deploy_net, snapshot_tag,
+def test_model(deploy_net, snapshot,
                visual_feature='feature_process_norm',
                language_feature='recurrent_embedding',
-               max_iter=30000,
-               snapshot_interval=30000,
                loc=False,
                test_h5='data/average_fc7.h5',
                split='val'):
@@ -50,15 +48,12 @@ def test_model(deploy_net, snapshot_tag,
     textual_feature_extractor = language_extractor_fcn(data, params, thread_result)
     possible_segments = visual_feature_extractor.possible_annotations
 
-    snapshot = '%s/%s_iter_%%d.caffemodel' %(snapshot_dir, snapshot_tag)
-
     visual_feature_extractor = visual_extractor_fcn(data, params, thread_result)
     textual_feature_extractor = language_extractor_fcn(data, params, thread_result)
     possible_segments = visual_feature_extractor.possible_annotations
 
-    assert snapshot_interval == max_iter
     sorted_segments_list = []
-    net = caffe.Net(deploy_net, snapshot % snapshot_interval, caffe.TEST)
+    net = caffe.Net(deploy_net, snapshot, caffe.TEST)
     queries, video_corpus, scores = OrderedDict(), OrderedDict(), OrderedDict()
     top_name = 'rank_score'
 
@@ -124,11 +119,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--deploy_net", type=str, default=None)
-    parser.add_argument("--snapshot_tag", type=str, default=None)
+    parser.add_argument("--snapshot", type=str, default=None)
     parser.add_argument("--visual_feature", type=str, default="feature_process_norm")
     parser.add_argument("--language_feature", type=str, default="recurrent_embedding")
-    parser.add_argument("--max_iter", type=int, default=30000)
-    parser.add_argument("--snapshot_interval", type=int, default=30000)
     parser.add_argument("--loc", dest='loc', action='store_true')
     parser.set_defaults(loc=False)
     parser.add_argument("--test_h5", type=str, default='data/average_fc7.h5')
@@ -136,11 +129,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    test_model(args.deploy_net, args.snapshot_tag,
+    test_model(args.deploy_net, args.snapshot,
                visual_feature = args.visual_feature,
                language_feature = args.language_feature,
-               max_iter = args.max_iter,
-               snapshot_interval = args.snapshot_interval,
                loc = args.loc,
                test_h5 = args.test_h5,
                split = args.split)
